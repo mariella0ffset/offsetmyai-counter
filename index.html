@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Usage Carbon Estimator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2em; max-width: 600px; margin: auto; background: #f5f5f5; }
+    h1 { color: #00b894; }
+    .card { background: white; padding: 1.5em; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: 1em; }
+    input[type=file] { margin-bottom: 1em; }
+    .result { font-weight: bold; color: #2d3436; }
+  </style>
+</head>
+<body>
+  <h1>ChatGPT Usage Carbon Estimator</h1>
+  <p>This tool analyzes your exported <code>conversations.json</code> file from ChatGPT to estimate your AI carbon footprint. <strong>All processing happens locally in your browser.</strong></p>
+  <div class="card">
+    <input type="file" id="fileInput" accept="application/json" />
+    <p class="result" id="output"></p>
+  </div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          let promptCount = 0;
+
+          data.forEach(convo => {
+            if (convo.mapping) {
+              Object.values(convo.mapping).forEach(turn => {
+                if (turn.message && turn.message.author.role === 'user') {
+                  promptCount++;
+                }
+              });
+            }
+          });
+
+          const energyPerPrompt = 0.05; // kWh
+          const co2PerKwh = 0.4; // kg CO2e
+          const totalKwh = promptCount * energyPerPrompt;
+          const totalCO2Kg = totalKwh * co2PerKwh;
+          const totalCO2Tonnes = totalCO2Kg / 1000;
+          const offsetCost = totalCO2Tonnes * 20;
+
+          document.getElementById('output').innerHTML =
+            `✅ You submitted <strong>${promptCount}</strong> prompts.<br>` +
+            `🔋 Estimated energy use: <strong>${totalKwh.toFixed(2)} kWh</strong><br>` +
+            `🌍 Estimated CO₂e emissions: <strong>${totalCO2Tonnes.toFixed(3)} tonnes</strong><br>` +
+            `💵 Offset cost (@ $20/tonne): <strong>$${offsetCost.toFixed(2)}</strong>`;
+        } catch (err) {
+          document.getElementById('output').textContent = 'Error processing file. Make sure it is your exported conversations.json.';
+        }
+      };
+
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>
